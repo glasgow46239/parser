@@ -1,0 +1,22 @@
+{
+  "merge": [
+    {"into": "Approve", "from": ["Strongly approve", "Somewhat approve"]},
+    {"into": "Disapprove", "from": ["Strongly disapprove", "Somewhat disapprove"]},
+    {"into": "Agree", "from": ["Strongly agree", "Somewhat agree"]},
+    {"into": "Disagree", "from": ["Strongly disagree", "Somewhat disagree"]},
+    {"into": "Like", "from": ["Strongly like", "Somewhat like"]},
+    {"into": "Dislike", "from": ["Strongly dislike", "Somewhat dislike"]},
+    {"into": "Acceptable", "from": ["Completely acceptable", "Somewhat acceptable"]},
+    {"into": "Unacceptable", "from": ["Completely unacceptable", "Somewhat unacceptable"]},
+    {"into": "Support", "from": ["Strongly support", "Somewhat support"]},
+    {"into": "Oppose", "from": ["Strongly oppose", "Somewhat oppose"]}
+  ],
+  "drop_patterns": [
+    "net:", "net ", "don't know", "dont know", "have not heard of",
+    "not heard of", "refused", "not sure", "undecided", "would not vote",
+    "will not vote", "feel close to any", "wouldn't vote", "none"
+  ],
+  "exclude_question_patterns": [
+    "issues facing the country", "most important issue"
+  ]
+}
