@@ -29,6 +29,8 @@ def is_blank_row(row):
     return all(cell_kind(v) == 'empty' for v in row)
 
 def label_of(row):
+    if not row:
+        return None
     v = row[0]
     if v is None:
         return None
