@@ -104,6 +104,7 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=
     category_presence = {}
     party_tables_reordered = set()
     party_fold_warnings = []
+    all_rows_with_flags = []
 
     with open(out_csv, 'w', newline='') as f:
         writer = csv.writer(f)
@@ -127,9 +128,13 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=
             collapsed, warnings = collapse_records(
                 parsed['records'], parsed['columns'], parsed['base_weighted'], collapse_rules, tol=tol
             )
+            net_warn_by_col = {}
             for w in warnings:
                 w['question'] = title
                 net_check_warnings.append(w)
+                net_warn_by_col.setdefault(w['col_idx'], []).append(
+                    f"NET mismatch: stated {w['net_label']} {w['stated_net_pct']} vs our {w['our_label']} {w['our_recombined_pct']}"
+                )
 
             col_idxs = [c['idx'] for c in parsed['columns']]
             collapsed, was_party_table, party_warnings = reorder_party_records(
@@ -137,8 +142,10 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=
             )
             if was_party_table:
                 party_tables_reordered.add(title)
+            block_flags = []
             for pw in party_warnings:
                 party_fold_warnings.append((title, pw))
+                block_flags.append(pw)
 
             total_col = next((c for c in parsed['columns'] if c['category'] == 'total'), None)
             sample_size = ''
@@ -156,8 +163,10 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=
                 pairs = [(c['label'], c['pct'].get(idx)) for c in collapsed if c['pct'].get(idx) is not None]
                 if not pairs:
                     continue
+                row_flags = list(block_flags) + net_warn_by_col.get(idx, [])
                 if len(pairs) > MAX_SLOTS:
                     overflow_blocks.append((title, col['subgroup'], len(pairs)))
+                    row_flags.append(f"overflow: {len(pairs)} options, showing first {MAX_SLOTS}")
                     pairs = pairs[:MAX_SLOTS]
                 labels = [p[0] for p in pairs] + [''] * (MAX_SLOTS - len(pairs))
                 pcts = [round(p[1] * 100, 1) if isinstance(p[1], float) else '' for p in pairs] + [''] * (MAX_SLOTS - len(pairs))
@@ -168,6 +177,7 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=
                 )
                 writer.writerow(row)
                 rows_written += 1
+                all_rows_with_flags.append((row, '; '.join(row_flags)))
 
     return {
         'rows_written': rows_written,
@@ -179,6 +189,7 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=
         'category_presence': category_presence,
         'party_tables_reordered': sorted(party_tables_reordered),
         'party_fold_warnings': party_fold_warnings,
+        'rows_with_flags': all_rows_with_flags,
     }
 
 if __name__ == '__main__':
