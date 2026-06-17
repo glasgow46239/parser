@@ -1,0 +1,11 @@
+{
+  "total": ["total"],
+  "gender": ["sex", "gender"],
+  "age": ["age"],
+  "region": ["region", "nation", "country", "uk nation"],
+  "current_vote": ["headline vi", "voting intention", "current vote", "current voting intention", "westminster vi"],
+  "historic_vote": ["2024 vote", "2019 vote", "2017 vote", "ge24", "ge19", "ge17", "eu ref", "eu16", "referendum", "general election", "brexit vote", "2024 ge", "2019 ge"],
+  "ethnicity": ["ethnicity", "ethnic group", "bame"],
+  "income": ["income", "household income"],
+  "class": ["social grade", "nssec", "ns-sec", "socio-economic", "social class"]
+}
