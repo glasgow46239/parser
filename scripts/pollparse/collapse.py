@@ -13,8 +13,11 @@ def collapse_records(records, columns, base_weighted, rules, tol=0.02):
     recombined total by more than `tol` -- signals a merge rule is missing a
     label variant, not just sampling noise.
     """
-    drop_patterns = [p.lower() for p in rules.get('drop_patterns', [])]
-    merge_map = build_merge_map(rules)
+    def norm(s):
+        return (s or '').replace('\u2019', "'").replace('\u2018', "'").strip().lower()
+
+    drop_patterns = [norm(p) for p in rules.get('drop_patterns', [])]
+    merge_map = {norm(f): rule['into'] for rule in rules.get('merge', []) for f in rule['from']}
     col_idxs = [c['idx'] for c in columns]
 
     order = []
@@ -24,7 +27,7 @@ def collapse_records(records, columns, base_weighted, rules, tol=0.02):
 
     for rec in records:
         label = rec['label'] or ''
-        ll = label.strip().lower()
+        ll = norm(label)
         if ll.startswith('net') or ll.startswith('net:'):
             net_rows.append(rec)
             continue
