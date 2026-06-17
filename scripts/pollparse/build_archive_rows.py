@@ -29,6 +29,8 @@ def find_table_marker_sheet(wb):
         markers = 0
         base_rows = 0
         for row in ws.iter_rows(values_only=True):
+            if not row:
+                continue
             v = row[0]
             if isinstance(v, str):
                 if v.startswith('Table_'):
@@ -61,7 +63,7 @@ def extract_blocks_per_sheet(wb):
         if not looks_like_data_sheet(name):
             continue
         ws = wb[name]
-        rows = list(enumerate(ws.iter_rows(values_only=True), start=1))
+        rows = [(idx, vals) for idx, vals in enumerate(ws.iter_rows(values_only=True), start=1) if vals]
         if not rows:
             continue
         title = rows[0][1][0]
