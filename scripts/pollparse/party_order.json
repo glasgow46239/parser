@@ -1,0 +1,21 @@
+{
+  "canonical_order": ["Con", "Lab", "LDem", "Ukip", "Grn", "SNP", "PC", "XX", "Ref", "Oth"],
+  "min_matches_to_trigger": 3,
+  "aliases": {
+    "Con": ["conservative", "conservatives", "con", "tory", "tories"],
+    "Lab": ["labour", "lab"],
+    "LDem": ["liberal democrat", "liberal democrats", "lib dem", "lib dems", "ld", "libdem"],
+    "Ukip": ["ukip", "uk independence party"],
+    "Grn": ["green", "greens", "green party", "grn", "green party of england and wales"],
+    "SNP": ["scottish national party", "snp"],
+    "PC": ["plaid cymru", "pc"],
+    "Ref": ["reform uk", "reform", "rfm"],
+    "Oth": ["other", "others", "another party", "other party", "oth"]
+  },
+  "ni_parties": [
+    "democratic unionist party", "dup", "sinn fein", "sinn féin",
+    "sdlp", "social democratic and labour party", "alliance",
+    "alliance party", "uup", "ulster unionist party", "tuv",
+    "traditional unionist voice"
+  ]
+}
