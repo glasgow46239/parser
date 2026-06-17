@@ -26,18 +26,13 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
         run: |
-          mkdir -p archive
-          for f in raw_tables/*.xlsx; do
-            [ -e "$f" ] || continue
-            base=$(basename "$f" .xlsx)
-            python scripts/pollparse/push_to_sheet.py "$f" \
-              --aliases scripts/pollparse/crosstab_aliases.json \
-              --collapse-rules scripts/pollparse/collapse_rules.json \
-              --party-order scripts/pollparse/party_order.json \
-              -o "archive/${base}.csv"
-          done
+          python scripts/pollparse/process_raw_tables.py \
+            --aliases scripts/pollparse/crosstab_aliases.json \
+            --collapse-rules scripts/pollparse/collapse_rules.json \
+            --party-order scripts/pollparse/party_order.json
 
       - name: Open a PR with the new/updated archive rows
+        if: always()
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "Parse new poll table(s)"
