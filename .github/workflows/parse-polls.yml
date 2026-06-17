@@ -21,13 +21,16 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Parse every xlsx in raw_tables/
+      - name: Parse every xlsx in raw_tables/ and push to the review sheet
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
         run: |
           mkdir -p archive
           for f in raw_tables/*.xlsx; do
             [ -e "$f" ] || continue
             base=$(basename "$f" .xlsx)
-            python scripts/pollparse/build_archive_rows.py "$f" \
+            python scripts/pollparse/push_to_sheet.py "$f" \
               --aliases scripts/pollparse/crosstab_aliases.json \
               --collapse-rules scripts/pollparse/collapse_rules.json \
               --party-order scripts/pollparse/party_order.json \
@@ -42,5 +45,6 @@ jobs:
           title: "New poll data ready for review"
           body: |
             Auto-generated from files in `raw_tables/`.
-            Check the diff for any `validated: FLAG` rows or console warnings
-            (overflow, NET-mismatch, unmatched group labels) before merging.
+            Anything flagged (overflow, NET-mismatch, unreordered party tables)
+            is visible in the `flags` column of the Review sheet, and in this
+            run's log output -- worth a glance there before merging this CSV.
