@@ -1,0 +1,43 @@
+name: Parse poll tables
+
+on:
+  push:
+    paths:
+      - 'raw_tables/**'
+  workflow_dispatch:  # lets you trigger it manually from the Actions tab too
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install -r requirements.txt
+
+      - name: Parse every xlsx in raw_tables/
+        run: |
+          mkdir -p archive
+          for f in raw_tables/*.xlsx; do
+            [ -e "$f" ] || continue
+            base=$(basename "$f" .xlsx)
+            python scripts/pollparse/build_archive_rows.py "$f" \
+              --aliases scripts/pollparse/crosstab_aliases.json \
+              --collapse-rules scripts/pollparse/collapse_rules.json \
+              --party-order scripts/pollparse/party_order.json \
+              -o "archive/${base}.csv"
+          done
+
+      - name: Open a PR with the new/updated archive rows
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Parse new poll table(s)"
+          branch: "poll-import/${{ github.run_id }}"
+          title: "New poll data ready for review"
+          body: |
+            Auto-generated from files in `raw_tables/`.
+            Check the diff for any `validated: FLAG` rows or console warnings
+            (overflow, NET-mismatch, unmatched group labels) before merging.
