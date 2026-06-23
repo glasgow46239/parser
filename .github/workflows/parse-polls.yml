@@ -29,7 +29,8 @@ jobs:
           python scripts/pollparse/process_raw_tables.py \
             --aliases scripts/pollparse/crosstab_aliases.json \
             --collapse-rules scripts/pollparse/collapse_rules.json \
-            --party-order scripts/pollparse/party_order.json
+            --party-order scripts/pollparse/party_order.json \
+            --question-labels scripts/pollparse/question_labels.json
 
       - name: Open a PR with the new/updated archive rows
         if: always()
