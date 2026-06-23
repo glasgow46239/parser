@@ -16,9 +16,10 @@ def get_worksheet(sheet_id, tab_name, creds_json):
         ws = sh.add_worksheet(title=tab_name, rows=1000, cols=len(TARGET_HEADER) + 1)
     return ws
 
-def push(xlsx_path, aliases_path, collapse_rules_path, party_order_path, out_csv,
-         sheet_id, tab_name, creds_json, tol=0.02):
-    summary = run(xlsx_path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=tol)
+def push(xlsx_path, aliases_path, collapse_rules_path, party_order_path, question_labels_path,
+         out_csv, sheet_id, tab_name, creds_json, tol=0.02):
+    summary = run(xlsx_path, aliases_path, collapse_rules_path, party_order_path,
+                  question_labels_path, out_csv, tol=tol)
     rows_with_flags = summary['rows_with_flags']
     if not rows_with_flags:
         print("No rows to push -- nothing written to the sheet.")
@@ -44,6 +45,7 @@ if __name__ == '__main__':
     ap.add_argument('--aliases', default='crosstab_aliases.json')
     ap.add_argument('--collapse-rules', default='collapse_rules.json')
     ap.add_argument('--party-order', default='party_order.json')
+    ap.add_argument('--question-labels', default='question_labels.json')
     ap.add_argument('--tol', type=float, default=0.02)
     ap.add_argument('--sheet-id', default=os.environ.get('GOOGLE_SHEET_ID'))
     ap.add_argument('--tab-name', default=os.environ.get('GOOGLE_SHEET_TAB', 'Review'))
@@ -55,5 +57,6 @@ if __name__ == '__main__':
     if not args.sheet_id:
         raise SystemExit("No sheet id provided (set GOOGLE_SHEET_ID or pass --sheet-id)")
 
-    push(args.xlsx, args.aliases, args.collapse_rules, args.party_order, args.out,
+    push(args.xlsx, args.aliases, args.collapse_rules, args.party_order,
+         args.question_labels, args.out,
          args.sheet_id, args.tab_name, creds_json, tol=args.tol)
