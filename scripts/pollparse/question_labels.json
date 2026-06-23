@@ -1,0 +1,375 @@
+{
+  "labels": [
+    {
+      "canonical": "Voting intention (Westminster)",
+      "patterns": [
+        "voting intention",
+        "headline vi",
+        "westminster vi",
+        "which party would you vote for",
+        "which party will you vote for",
+        "general election tomorrow",
+        "if there were a general election",
+        "vote in the next general election",
+        "how would you vote",
+        "constituency vote",
+        "westminster election was taking place tomorrow",
+        "uk general election for the westminster parliament"
+      ]
+    },
+    {
+      "canonical": "Voting intention (Holyrood)",
+      "patterns": [
+        "scottish parliament",
+        "holyrood",
+        "scottish election",
+        "vote in the scottish",
+        "constituency vote scotland"
+      ]
+    },
+    {
+      "canonical": "Voting intention (Senedd)",
+      "patterns": [
+        "senedd",
+        "welsh parliament",
+        "welsh election",
+        "vote in the welsh"
+      ]
+    },
+    {
+      "canonical": "Voting intention (Local)",
+      "patterns": [
+        "local council election",
+        "local election",
+        "local government election"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Badenoch)",
+      "patterns": [
+        "badenoch"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Starmer)",
+      "patterns": [
+        "starmer"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Davey)",
+      "patterns": [
+        "davey"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Farage)",
+      "patterns": [
+        "farage"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Polanski)",
+      "patterns": [
+        "polanski"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Corbyn)",
+      "patterns": [
+        "corbyn"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Burnham)",
+      "patterns": [
+        "burnham"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Rayner)",
+      "patterns": [
+        "rayner"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Streeting)",
+      "patterns": [
+        "streeting"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Lowe)",
+      "patterns": [
+        "rupert lowe"
+      ]
+    },
+    {
+      "canonical": "Leader favourability (Mahmood)",
+      "patterns": [
+        "mahmood"
+      ]
+    },
+    {
+      "canonical": "PM approval (Starmer)",
+      "patterns": [
+        "starmer is handling his job as prime minister",
+        "starmer is doing as prime minister",
+        "job starmer is doing as prime minister",
+        "satisfied with starmer",
+        "approve of starmer",
+        "starmer as prime minister"
+      ]
+    },
+    {
+      "canonical": "Preferred Prime Minister",
+      "patterns": [
+        "best prime minister",
+        "better prime minister",
+        "most capable prime minister",
+        "who would make the best pm",
+        "most suited to be prime minister",
+        "preferred prime minister",
+        "who do you think would make the better",
+        "best person to be prime minister"
+      ]
+    },
+    {
+      "canonical": "Government approval",
+      "patterns": [
+        "satisfied with the government",
+        "approve of the government",
+        "government is doing",
+        "handling of the government",
+        "approve or disapprove of the government"
+      ]
+    },
+    {
+      "canonical": "Best party on economy",
+      "patterns": [
+        "best party.*econom",
+        "handle.*econom",
+        "econom.*best party",
+        "trust.*econom",
+        "most capable.*econom"
+      ]
+    },
+    {
+      "canonical": "Best party on NHS/healthcare",
+      "patterns": [
+        "nhs",
+        "health service",
+        "healthcare",
+        "health care"
+      ]
+    },
+    {
+      "canonical": "Best party on immigration",
+      "patterns": [
+        "immigr"
+      ]
+    },
+    {
+      "canonical": "Best party on housing",
+      "patterns": [
+        "hous"
+      ]
+    },
+    {
+      "canonical": "Best party on crime",
+      "patterns": [
+        "crime",
+        "law and order",
+        "policing"
+      ]
+    },
+    {
+      "canonical": "Best party on defence",
+      "patterns": [
+        "defence",
+        "defense",
+        "military",
+        "armed forces"
+      ]
+    },
+    {
+      "canonical": "Best party on cost of living",
+      "patterns": [
+        "cost of living",
+        "inflation",
+        "prices"
+      ]
+    },
+    {
+      "canonical": "Party favourability",
+      "patterns": [
+        "like or dislike the following part",
+        "favourable.*opinion.*party",
+        "opinion of the following part",
+        "approval.*party",
+        "party approval",
+        "feel close to any political party",
+        "which.*parties.*closest"
+      ]
+    },
+    {
+      "canonical": "Party identification",
+      "patterns": [
+        "feel closest to",
+        "closest to any political party",
+        "which party do you feel"
+      ]
+    },
+    {
+      "canonical": "Leader character traits",
+      "patterns": [
+        "most demonstrates the following",
+        "which.*leader.*best describes",
+        "character.*leader",
+        "leader.*character",
+        "honesty",
+        "competence",
+        "strong leadership",
+        "empathy",
+        "decisiveness",
+        "reliability",
+        "out of touch"
+      ]
+    },
+    {
+      "canonical": "Confidence by policy area",
+      "patterns": [
+        "on a scale.*confident",
+        "how confident",
+        "confident.*party",
+        "confidence.*party"
+      ]
+    },
+    {
+      "canonical": "Best party on environment/climate",
+      "patterns": [
+        "environment",
+        "climate change"
+      ]
+    },
+    {
+      "canonical": "Best party on education",
+      "patterns": [
+        "education"
+      ]
+    },
+    {
+      "canonical": "Best party on energy",
+      "patterns": [
+        "energy"
+      ]
+    },
+    {
+      "canonical": "Best party on welfare/benefits",
+      "patterns": [
+        "welfare",
+        "benefit",
+        "social security"
+      ]
+    },
+    {
+      "canonical": "Best party on pensions",
+      "patterns": [
+        "pension"
+      ]
+    },
+    {
+      "canonical": "Best party on foreign policy",
+      "patterns": [
+        "foreign policy",
+        "international relations",
+        "foreign affairs"
+      ]
+    },
+    {
+      "canonical": "Best party on transport",
+      "patterns": [
+        "transport"
+      ]
+    },
+    {
+      "canonical": "Best party on this policy area",
+      "patterns": [
+        "thinking about the following policy areas",
+        "which party.*best at handling",
+        "best party.*policy",
+        "policy area.*which party"
+      ]
+    },
+    {
+      "canonical": "Issue salience",
+      "patterns": [
+        "most important issue",
+        "important issue facing",
+        "biggest issue",
+        "main issue",
+        "most important problem",
+        "important problems facing",
+        "most pressing issue",
+        "key issue",
+        "top issue"
+      ]
+    },
+    {
+      "canonical": "EU rejoining",
+      "patterns": [
+        "rejoin the eu",
+        "rejoin the european union",
+        "membership of the eu",
+        "rejoin eu",
+        "back into the eu",
+        "return to the eu",
+        "re-join"
+      ]
+    },
+    {
+      "canonical": "Scottish independence",
+      "patterns": [
+        "scottish independence",
+        "scotland.*independent",
+        "independent.*scotland",
+        "scotland.*leave the uk",
+        "scotland.*remain in the uk",
+        "should scotland be"
+      ]
+    },
+    {
+      "canonical": "Welsh independence",
+      "patterns": [
+        "welsh independence",
+        "wales.*independent",
+        "independent.*wales",
+        "wales.*leave the uk",
+        "should wales be"
+      ]
+    },
+    {
+      "canonical": "Right/wrong direction",
+      "patterns": [
+        "right direction",
+        "wrong direction",
+        "right track",
+        "wrong track",
+        "heading in the right",
+        "things in britain are going"
+      ]
+    },
+    {
+      "canonical": "Economic optimism",
+      "patterns": [
+        "economic outlook",
+        "economic optimism",
+        "economy.*next.*year",
+        "economy.*better.*worse",
+        "expect.*economy",
+        "economy.*improve",
+        "personal financial situation"
+      ]
+    }
+  ]
+}
