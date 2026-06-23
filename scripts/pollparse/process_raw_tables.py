@@ -8,6 +8,7 @@ def main():
     ap.add_argument('--aliases', default='crosstab_aliases.json')
     ap.add_argument('--collapse-rules', default='collapse_rules.json')
     ap.add_argument('--party-order', default='party_order.json')
+    ap.add_argument('--question-labels', default='question_labels.json')
     ap.add_argument('--sheet-id', default=os.environ.get('GOOGLE_SHEET_ID'))
     ap.add_argument('--tab-name', default=os.environ.get('GOOGLE_SHEET_TAB', 'Review'))
     ap.add_argument('--tol', type=float, default=0.02)
@@ -29,7 +30,8 @@ def main():
         out_csv = os.path.join(args.archive_dir, base + '.csv')
         print(f"\n=== {f} ===")
         try:
-            push(f, args.aliases, args.collapse_rules, args.party_order, out_csv,
+            push(f, args.aliases, args.collapse_rules, args.party_order,
+                 args.question_labels, out_csv,
                  args.sheet_id, args.tab_name, creds_json, tol=args.tol)
             succeeded.append(f)
         except Exception as e:
