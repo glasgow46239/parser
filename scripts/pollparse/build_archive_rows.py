@@ -4,6 +4,7 @@ from parser import parse_block, validate_block, cell_kind
 from categorize import load_aliases, categorize_columns
 from collapse import collapse_records
 from party_order import reorder_party_records
+from question_match import load_question_labels, match_question
 
 SKIP_SHEET_HINTS = ('cover', 'index', 'front page', 'contents', 'methodology')
 KEEP_CATEGORIES = {'total', 'gender', 'age', 'region', 'current_vote',
@@ -12,7 +13,8 @@ MAX_SLOTS = 10
 
 TARGET_HEADER = (
     ['Sample', 'Sample detail', 'Fieldwork end date', 'Full fieldwork dates',
-     'Parliament', 'Sample size', 'Pollster', 'Category', 'Sub-category', 'Question detail']
+     'Parliament', 'Sample size', 'Pollster', 'Category', 'Sub-category', 'Question detail',
+     'canonical_question', 'match_pattern']
     + [f'#{i}' for i in range(1, MAX_SLOTS + 1)]
     + [f'#{i}' for i in range(1, MAX_SLOTS + 1)]
     + ['source_file', 'sheet']
@@ -87,12 +89,13 @@ def is_excluded_question(title, patterns):
     t = (title or '').lower()
     return any(p.lower() in t for p in patterns)
 
-def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=0.02):
+def run(path, aliases_path, collapse_rules_path, party_order_path, question_labels_path, out_csv, tol=0.02):
     aliases = load_aliases(aliases_path)
     with open(collapse_rules_path) as f:
         collapse_rules = json.load(f)
     with open(party_order_path) as f:
         party_config = json.load(f)
+    question_labels = load_question_labels(question_labels_path)
     exclude_patterns = collapse_rules.get('exclude_question_patterns', [])
 
     blocks = extract_blocks(path)
@@ -157,6 +160,8 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=
                     sample_size = bw_val
             leading = ['', '', '', '', '', sample_size, '']
 
+            canonical, matched_pat = match_question(title, question_labels)
+
             for col in parsed['columns']:
                 cat = col['category']
                 if cat not in KEEP_CATEGORIES:
@@ -173,13 +178,18 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=
                 labels = [p[0] for p in pairs] + [''] * (MAX_SLOTS - len(pairs))
                 pcts = [round(p[1] * 100, 1) if isinstance(p[1], float) else '' for p in pairs] + [''] * (MAX_SLOTS - len(pairs))
                 row = (
-                    leading + [cat, col['subgroup'], title]
+                    leading + [cat, col['subgroup'], title, canonical, matched_pat]
                     + labels + pcts
                     + [source_file, sheet]
                 )
                 writer.writerow(row)
                 rows_written += 1
                 all_rows_with_flags.append((row, '; '.join(row_flags)))
+
+    unmatched_questions = sorted(set(
+        row[9] for row, _ in all_rows_with_flags
+        if len(row) > 10 and row[10] == 'UNMATCHED'
+    ))
 
     return {
         'rows_written': rows_written,
@@ -192,6 +202,7 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, out_csv, tol=
         'party_tables_reordered': sorted(party_tables_reordered),
         'party_fold_warnings': party_fold_warnings,
         'rows_with_flags': all_rows_with_flags,
+        'unmatched_questions': unmatched_questions,
     }
 
 if __name__ == '__main__':
@@ -201,9 +212,11 @@ if __name__ == '__main__':
     ap.add_argument('--aliases', default='crosstab_aliases.json')
     ap.add_argument('--collapse-rules', default='collapse_rules.json')
     ap.add_argument('--party-order', default='party_order.json')
+    ap.add_argument('--question-labels', default='question_labels.json')
     ap.add_argument('--tol', type=float, default=0.02)
     args = ap.parse_args()
-    summary = run(args.xlsx, args.aliases, args.collapse_rules, args.party_order, args.out, tol=args.tol)
+    summary = run(args.xlsx, args.aliases, args.collapse_rules, args.party_order,
+                  args.question_labels, args.out, tol=args.tol)
     print(f"Wrote {summary['rows_written']} rows from {summary['blocks_total']} table blocks to {args.out}")
     print(f"Excluded {len(summary['excluded_blocks'])} out-of-scope question blocks (e.g. issues trackers)")
     if summary['overflow_blocks']:
@@ -211,18 +224,21 @@ if __name__ == '__main__':
         for title, subgroup, n in summary['overflow_blocks'][:20]:
             print(f"  [{n} options] {title[:70]} / {subgroup}")
     if summary['net_check_warnings']:
-        print(f"\n{len(summary['net_check_warnings'])} NET-row cross-check mismatches (our recombination disagreed with the pollster's own NET row by more than tolerance):")
+        print(f"\n{len(summary['net_check_warnings'])} NET-row cross-check mismatches:")
         for w in summary['net_check_warnings'][:20]:
-            print(f"  {w['question'][:50]} | {w['net_label']} vs our {w['our_label']}: stated {w['stated_net_pct']} vs ours {w['our_recombined_pct']} (diff {w['diff']})")
+            print(f"  {w['question'][:50]} | {w['net_label']} vs our {w['our_label']}: diff {w['diff']}")
     print(f"\nCrosstab categories found: {summary['category_presence']}")
     missing = sorted(KEEP_CATEGORIES - set(summary['category_presence']))
     if missing:
         print(f"Requested categories NOT found in this file: {missing}")
     if summary['party_tables_reordered']:
-        print(f"\nReordered {len(summary['party_tables_reordered'])} voting-intention question(s) into fixed party order:")
-        for t in summary['party_tables_reordered']:
-            print(f"  {t[:80]}")
+        print(f"\nReordered {len(summary['party_tables_reordered'])} voting-intention question(s) into fixed party order")
     if summary['party_fold_warnings']:
         print(f"\n{len(summary['party_fold_warnings'])} party-table warning(s):")
         for t, w in summary['party_fold_warnings']:
             print(f"  {t[:60]}\n    {w}")
+    unmatched = summary.get('unmatched_questions', [])
+    if unmatched:
+        print(f"\n{len(unmatched)} question(s) had no canonical match -- add patterns to question_labels.json if relevant:")
+        for q in unmatched[:30]:
+            print(f"  {q[:100]}")
