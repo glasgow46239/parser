@@ -5,6 +5,7 @@ from categorize import load_aliases, categorize_columns
 from collapse import collapse_records
 from party_order import reorder_party_records
 from question_match import load_question_labels, match_question
+from extract_metadata import extract_headline_sample
 
 SKIP_SHEET_HINTS = ('cover', 'index', 'front page', 'contents', 'methodology')
 KEEP_CATEGORIES = {'total', 'gender', 'age', 'region', 'current_vote',
@@ -12,8 +13,8 @@ KEEP_CATEGORIES = {'total', 'gender', 'age', 'region', 'current_vote',
 MAX_SLOTS = 10
 
 TARGET_HEADER = (
-    ['Sample', 'Sample detail', 'Fieldwork end date', 'Full fieldwork dates',
-     'Parliament', 'Sample size', 'Pollster', 'Category', 'Sub-category', 'Question detail',
+    ['Headline sample', 'Fieldwork dates', 'Fieldwork end date', 'Full fieldwork dates',
+     'Parliament', 'Sample size', 'Pollster', 'Subsample dimension', 'Subsample', 'Question detail',
      'canonical_question', 'match_pattern']
     + [f'#{i}' for i in range(1, MAX_SLOTS + 1)]
     + [f'#{i}' for i in range(1, MAX_SLOTS + 1)]
@@ -101,6 +102,11 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, question_labe
     blocks = extract_blocks(path)
     source_file = path.split('/')[-1]
 
+    # Extract headline metadata once per file
+    from openpyxl import load_workbook as _lw
+    _wb = _lw(path, read_only=True, data_only=True)
+    headline_sample, fieldwork_dates = extract_headline_sample(_wb)
+
     rows_written = 0
     excluded_blocks = []
     overflow_blocks = []
@@ -158,7 +164,11 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, question_labe
                 bw_val = parsed['base_weighted'][total_col['idx']] if total_col['idx'] < len(parsed['base_weighted']) else None
                 if isinstance(bw_val, int):
                     sample_size = bw_val
-            leading = ['', '', '', '', '', sample_size, '']
+
+            hs = headline_sample or ''
+            if hs and not any(c.isdigit() for c in hs) and sample_size:
+                hs = f"{sample_size:,} {hs}"
+            leading = [hs, fieldwork_dates or '', '', '', '', sample_size, '']
 
             canonical, matched_pat = match_question(title, question_labels)
 
