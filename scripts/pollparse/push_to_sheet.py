@@ -16,9 +16,9 @@ def get_worksheet(sheet_id, tab_name, creds_json, clear=False):
             # Delete and recreate to actually free the allocated cells,
             # not just clear content (which leaves rows pre-allocated)
             sh.del_worksheet(ws)
-            ws = sh.add_worksheet(title=tab_name, rows=1000, cols=len(TARGET_HEADER) + 1)
+            ws = sh.add_worksheet(title=tab_name, rows=100, cols=len(TARGET_HEADER) + 1)
     except gspread.WorksheetNotFound:
-        ws = sh.add_worksheet(title=tab_name, rows=1000, cols=len(TARGET_HEADER) + 1)
+        ws = sh.add_worksheet(title=tab_name, rows=100, cols=len(TARGET_HEADER) + 1)
     return ws
 
 def push(xlsx_path, aliases_path, collapse_rules_path, party_order_path, question_labels_path,
