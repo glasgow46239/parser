@@ -1,5 +1,5 @@
 {
-  "total": ["total"],
+  "total": ["total", "all", "all respondents", "all adults"],
   "gender": ["sex", "gender"],
   "age": ["age"],
   "region": ["region", "nation", "country", "uk nation"],
