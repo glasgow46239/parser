@@ -27,7 +27,7 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 # Canonical output order, matching the BENMA party ordering
 OUTPUT_COLS = ['Date', 'Pollster', 'Client', 'Area', 'Sample',
                'Con', 'Lab', 'LDem', 'Ref', 'Grn', 'SNP', 'PC',
-               'Oth', 'Lead', 'Notes', 'scraped_at']
+               'Oth', 'Lead', 'Notes', 'source_url', 'scraped_at']
 
 PARTY_MAP = {
     'con': 'Con', 'conservative': 'Con', 'tory': 'Con',
@@ -79,6 +79,47 @@ def _clean_lead(raw):
     m = re.search(r'-?\d+', raw)
     return m.group(0) if m else raw
 
+def build_footnote_url_map(soup):
+    """
+    Wikipedia citation footnotes follow a consistent pattern:
+      <li id="cite_note-7"> ... <a href="https://external.url">text</a> ... </li>
+    Build a dict mapping each footnote id → first external URL found in it.
+    """
+    url_map = {}
+    for li in soup.find_all('li', id=re.compile(r'^cite_note-')):
+        note_id = li['id']  # e.g. 'cite_note-7'
+        # Find the first external link (rel="nofollow" or href starting with http)
+        for a in li.find_all('a', href=True):
+            href = a['href']
+            if href.startswith('http') and 'wikipedia.org' not in href:
+                url_map[note_id] = href
+                break
+    return url_map
+
+def extract_citation_urls(cell, url_map):
+    """
+    Given a BeautifulSoup <td> element and the footnote URL map, find all
+    superscript citation references and resolve them to external URLs.
+    Returns a comma-separated string of unique URLs, or '' if none found.
+    """
+    urls = []
+    for sup in cell.find_all('sup', class_='reference'):
+        a = sup.find('a', href=re.compile(r'#cite_note-'))
+        if not a:
+            continue
+        # href is like '#cite_note-7', strip the '#'
+        note_id = a['href'].lstrip('#')
+        url = url_map.get(note_id, '')
+        if url and url not in urls:
+            urls.append(url)
+    # Also check for direct external links in the cell itself
+    for a in cell.find_all('a', href=True):
+        href = a['href']
+        if href.startswith('http') and 'wikipedia.org' not in href and href not in urls:
+            urls.append(href)
+    return ', '.join(urls)
+
+
 def fetch_table(year=None):
     """
     Fetches all polling rows from the Wikipedia page.
@@ -87,6 +128,9 @@ def fetch_table(year=None):
     resp = requests.get(WIKI_URL, headers={'User-Agent': 'BENMA-poll-scraper/1.0'}, timeout=30)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.content, 'html.parser')
+
+    # Build citation footnote → external URL map once for the whole page
+    url_map = build_footnote_url_map(soup)
 
     tables = soup.find_all('table', class_='wikitable')
     if not tables:
@@ -121,25 +165,32 @@ def fetch_table(year=None):
                 i = col_idx.get(key)
                 return texts[i] if i is not None and i < len(texts) else default
 
+            # Source URL: pull citations from the Pollster cell (col index 1)
+            pollster_idx = col_idx.get('pollster', 1)
+            source_url = ''
+            if pollster_idx < len(cells):
+                source_url = extract_citation_urls(cells[pollster_idx], url_map)
+
             oth_raw = get('others')
             oth_pct, oth_notes = _parse_others(oth_raw)
 
             row = {
-                'Date':     date_raw,
-                'Pollster': get('pollster'),
-                'Client':   get('client'),
-                'Area':     get('area'),
-                'Sample':   get('sample size').replace(',', ''),
-                'Con':      _pct(get('con')),
-                'Lab':      _pct(get('lab')),
-                'LDem':     _pct(get('ld')),
-                'Ref':      _pct(get('ref')),
-                'Grn':      _pct(get('grn')),
-                'SNP':      _pct(get('snp')),
-                'PC':       _pct(get('pc')),
-                'Oth':      oth_pct,
-                'Lead':     _clean_lead(get('lead')),
-                'Notes':    oth_notes,
+                'Date':       date_raw,
+                'Pollster':   get('pollster'),
+                'Client':     get('client'),
+                'Area':       get('area'),
+                'Sample':     get('sample size').replace(',', ''),
+                'Con':        _pct(get('con')),
+                'Lab':        _pct(get('lab')),
+                'LDem':       _pct(get('ld')),
+                'Ref':        _pct(get('ref')),
+                'Grn':        _pct(get('grn')),
+                'SNP':        _pct(get('snp')),
+                'PC':         _pct(get('pc')),
+                'Oth':        oth_pct,
+                'Lead':       _clean_lead(get('lead')),
+                'Notes':      oth_notes,
+                'source_url': source_url,
                 'scraped_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
             }
             rows_out.append(row)
