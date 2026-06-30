@@ -25,14 +25,15 @@ def main():
     print(f"Found {len(files)} xlsx file(s) in {args.raw_dir}/")
 
     succeeded, failed = [], []
-    for f in files:
+    for i, f in enumerate(files):
         base = os.path.splitext(os.path.basename(f))[0]
         out_csv = os.path.join(args.archive_dir, base + '.csv')
         print(f"\n=== {f} ===")
         try:
             push(f, args.aliases, args.collapse_rules, args.party_order,
                  args.question_labels, out_csv,
-                 args.sheet_id, args.tab_name, creds_json, tol=args.tol)
+                 args.sheet_id, args.tab_name, creds_json, tol=args.tol,
+                 clear_first=(i == 0))  # wipe the tab clean on the first file of every batch
             succeeded.append(f)
         except Exception as e:
             print(f"FAILED: {f}: {e}")
