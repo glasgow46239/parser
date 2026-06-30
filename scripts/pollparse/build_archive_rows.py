@@ -1,6 +1,7 @@
 import sys, csv, json, argparse
 from openpyxl import load_workbook
 from parser import parse_block, validate_block, cell_kind
+from parser_fraction import parse_fraction_block, is_fraction_format
 from categorize import load_aliases, categorize_columns
 from collapse import collapse_records
 from party_order import reorder_party_records
@@ -60,6 +61,16 @@ def extract_blocks_multi_table_sheet(wb, sheet_name):
         blocks.append((sheet_name, title, body))
     return blocks
 
+def _is_bmg_style(rows):
+    """BMG tables have col A always blank; col B holds labels and 'Table N' markers."""
+    non_empty_a = sum(1 for _, vals in rows[:30] if vals and vals[0] is not None)
+    table_markers_in_b = sum(
+        1 for _, vals in rows[:50]
+        if vals and len(vals) > 1 and isinstance(vals[1], str)
+        and vals[1].strip().startswith('Table ')
+    )
+    return non_empty_a == 0 and table_markers_in_b >= 1
+
 def extract_blocks_per_sheet(wb):
     blocks = []
     for name in wb.sheetnames:
@@ -79,11 +90,55 @@ def extract_blocks_per_sheet(wb):
         blocks.append((name, title, body))
     return blocks
 
+def extract_blocks_bmg(wb, sheet_name):
+    """Extract blocks from BMG-style files where col A is blank, col B has
+    'Table X' markers, and data follows in col B onwards."""
+    ws = wb[sheet_name]
+    all_rows = list(enumerate(ws.iter_rows(values_only=True), start=1))
+    starts = [
+        i for i, (_, vals) in enumerate(all_rows)
+        if vals and len(vals) > 1 and isinstance(vals[1], str)
+        and vals[1].strip().startswith('Table ')
+    ]
+    blocks = []
+    for k, s in enumerate(starts):
+        end = starts[k + 1] if k + 1 < len(starts) else len(all_rows)
+        title_row = all_rows[s][1]
+        # Title may be on the row after 'Table X' in col B
+        title = title_row[1] if len(title_row) > 1 and title_row[1] else f"Table_{k+1}"
+        # Look ahead for a question-text row in col B
+        for j in range(s, min(s + 5, end)):
+            v = all_rows[j][1][1] if len(all_rows[j][1]) > 1 else None
+            if not isinstance(v, str):
+                continue
+            vs = v.strip()
+            if not vs or vs.startswith('Table ') or vs.lower() in ('the i tables', 'tables'):
+                continue
+            if len(vs) > 10:
+                title = vs
+                break
+        body = [(idx, list(vals)) for idx, vals in all_rows[s:end]]
+        blocks.append((sheet_name, title, body))
+    return blocks
+
 def extract_blocks(path):
     wb = load_workbook(path, read_only=True, data_only=True)
+
+    # ── Survation-style: single big sheet with Table_XXX markers ──
     marker_sheet = find_table_marker_sheet(wb)
     if marker_sheet:
         return extract_blocks_multi_table_sheet(wb, marker_sheet)
+
+    # ── BMG-style: col A always blank, Table X markers in col B ──
+    for name in wb.sheetnames:
+        if not looks_like_data_sheet(name):
+            continue
+        ws = wb[name]
+        sample = list(enumerate(ws.iter_rows(min_row=1, max_row=60, values_only=True), 1))
+        if _is_bmg_style(sample):
+            return extract_blocks_bmg(wb, name)
+
+    # ── Default: one question per sheet (Opinium, FoN, MiC, ...) ──
     return extract_blocks_per_sheet(wb)
 
 def is_excluded_question(title, patterns):
@@ -124,11 +179,26 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, question_labe
             if is_excluded_question(title, exclude_patterns):
                 excluded_blocks.append(title)
                 continue
+            # Detect fraction format (Find Out Now, More in Common, BMG)
+            # by sampling the first few rows of the body
+            body_vals = [vals for _, vals in body[:15]]
+            use_fraction = is_fraction_format(body_vals)
+            bmg_mode = False
+            if not use_fraction:
+                # Check for BMG col-B layout: col A blank, col B has the question text
+                non_empty_a = sum(1 for v in body_vals if v and v[0] is not None)
+                if non_empty_a == 0 and any(v and len(v) > 1 and v[1] for v in body_vals):
+                    use_fraction = True
+                    bmg_mode = True
+
             try:
-                parsed = parse_block(title, body)
+                if use_fraction:
+                    parsed = parse_fraction_block(title, [vals for _, vals in body], bmg_mode=bmg_mode)
+                else:
+                    parsed = parse_block(title, body)
             except Exception:
                 continue
-            if not parsed['columns'] or not parsed['records']:
+            if not parsed or not parsed['columns'] or not parsed['records']:
                 continue
             unmatched = categorize_columns(parsed['columns'], aliases)
             all_unmatched.update(unmatched)
@@ -136,16 +206,22 @@ def run(path, aliases_path, collapse_rules_path, party_order_path, question_labe
                 if col['category']:
                     category_presence[col['category']] = category_presence.get(col['category'], 0) + 1
 
+            # Fraction-format pct values are 0-1; the output step already
+            # does ×100, so we just clear base_weighted (no counts to validate).
+            if use_fraction:
+                parsed['base_weighted'] = None
+
             collapsed, warnings = collapse_records(
                 parsed['records'], parsed['columns'], parsed['base_weighted'], collapse_rules, tol=tol
             )
             net_warn_by_col = {}
-            for w in warnings:
-                w['question'] = title
-                net_check_warnings.append(w)
-                net_warn_by_col.setdefault(w['col_idx'], []).append(
-                    f"NET mismatch: stated {w['net_label']} {w['stated_net_pct']} vs our {w['our_label']} {w['our_recombined_pct']}"
-                )
+            if not use_fraction:
+                for w in warnings:
+                    w['question'] = title
+                    net_check_warnings.append(w)
+                    net_warn_by_col.setdefault(w['col_idx'], []).append(
+                        f"NET mismatch: stated {w['net_label']} {w['stated_net_pct']} vs our {w['our_label']} {w['our_recombined_pct']}"
+                    )
 
             col_idxs = [c['idx'] for c in parsed['columns']]
             collapsed, was_party_table, party_warnings = reorder_party_records(
