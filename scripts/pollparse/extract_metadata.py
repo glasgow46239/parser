@@ -12,7 +12,9 @@ GEO_PATTERNS = [
 ]
 
 def _geo_from_text(text):
-    t = (text or '').lower()
+    # Strip exclusion parentheticals like '(excludes Northern Ireland)' before
+    # matching, so 'GB adults (excludes NI)' correctly resolves to GB Adults
+    t = re.sub(r'\(excludes[^)]*\)', '', (text or '')).lower()
     for pat, label in GEO_PATTERNS:
         if re.search(pat, t):
             return label
@@ -62,14 +64,21 @@ def extract_headline_sample(wb):
                 'fieldwork dates': 'fieldwork',
                 'fieldwork date': 'fieldwork',
                 'dates': 'fieldwork',
+                'population effectively represented': 'population',
+                'population sampled': 'population',
+                'population': 'population',
+                'respondents': 'population',
+                'sample detail': 'skip',
             }
+            bare_sample_size = None  # numeric-only sample size without geo description
             for col_idx, cell in enumerate(row):
                 if not isinstance(cell, str):
                     continue
-                key = cell.strip().lower().rstrip(':')
+                key = cell.strip().lower().rstrip(':').rstrip()
                 if key in KEY_SYNONYMS:
                     kind = KEY_SYNONYMS[key]
-                    # Look for the first non-None cell to the right in this row
+                    if kind == 'skip':
+                        continue
                     rest = [v for v in row[col_idx+1:] if v is not None and str(v).strip()]
                     if not rest:
                         continue
@@ -78,8 +87,17 @@ def extract_headline_sample(wb):
                         if any(w in value.lower() for w in ['adult', 'gb', 'uk', 'britain',
                                                              'england', 'scotland', 'wales']):
                             headline = _normalise_sample_str(value)
+                        elif re.match(r'^[\d,]+$', value.replace(' ', '')):
+                            bare_sample_size = value  # pure number, combine with geo later
+                    if kind == 'population' and not headline:
+                        geo = _geo_from_text(value)
+                        if geo:
+                            # combine with bare sample size if we have one
+                            if bare_sample_size:
+                                headline = f"{bare_sample_size} {geo}"
+                            else:
+                                headline = geo  # will be combined with base in caller
                     if kind == 'fieldwork' and not fieldwork:
-                        # only take it if it looks like an actual date, not a column header
                         if re.search(r'\d{4}|\d+\w+\s+\w+', value):
                             fieldwork = value
 
@@ -111,13 +129,13 @@ def extract_headline_sample(wb):
                     if date_m:
                         fieldwork = date_m.group(1).strip()
 
-            # ── Title line scan (YouGov xlsx style) ───────────────────────
+            # ── Title line scan (YouGov / BMG inline style) ──────────────────
             for v in row:
                 if not isinstance(v, str):
                     continue
-                # 'Sample Size: 2267 Adults in GB' or similar
+                # 'Sample Size: 2267 Adults in GB' or 'Sample: 1,511 GB adults aged 18+'
                 m = re.search(
-                    r'sample\s*size\s*[:\-]?\s*([\d,]+)\s+(.*?adult(?:s)?(?:\s+in\s+\w[\w\s]*)?)',
+                    r'sample\s*(?:size)?\s*[:\-]?\s*([\d,]+)\s+(.*?adult(?:s)?)',
                     v, re.IGNORECASE
                 )
                 if m and not headline:
@@ -126,11 +144,12 @@ def extract_headline_sample(wb):
                     geo = _geo_from_text(desc) or 'Adults'
                     headline = f"{n} {geo}"
 
-                # Inline date in title 'Fieldwork: 14th - 15th June 2026'
+                # 'Fieldwork: DATE' or 'Fieldwork dates: DATE' or 'Fieldwork date: DATE'
                 m2 = re.search(
-                    r'fieldwork\s*[:\-]\s*('
-                    r'\d{1,2}(?:st|nd|rd|th)?\s*[-–]\s*\d{1,2}(?:st|nd|rd|th)?\s+\w+\s+\d{4}'
-                    r'|\d{1,2}(?:st|nd|rd|th)?\s+\w+\s+\d{4})',
+                    r'fieldwork\s*(?:date[s]?)?\s*[:\-]\s*('
+                    r'\d{1,2}(?:st|nd|rd|th)?(?:\s*[-–]\s*\d{1,2}(?:st|nd|rd|th)?)?\s+\w+\s+\d{4}'
+                    r'|\d{1,2}(?:st|nd|rd|th)?\s+\w+\s+\d{4}'
+                    r'|\d{1,2}(?:st|nd|rd|th)?\s*[-–]\s*\d{1,2}(?:st|nd|rd|th)?\s+\w+\s+\d{4})',
                     v, re.IGNORECASE
                 )
                 if m2 and not fieldwork:
