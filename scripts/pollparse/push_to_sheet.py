@@ -5,19 +5,24 @@ from build_archive_rows import run, TARGET_HEADER
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-def get_worksheet(sheet_id, tab_name, creds_json):
+def get_worksheet(sheet_id, tab_name, creds_json, clear=False):
     creds_dict = json.loads(creds_json)
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(sheet_id)
     try:
         ws = sh.worksheet(tab_name)
+        if clear:
+            # Delete and recreate to actually free the allocated cells,
+            # not just clear content (which leaves rows pre-allocated)
+            sh.del_worksheet(ws)
+            ws = sh.add_worksheet(title=tab_name, rows=1000, cols=len(TARGET_HEADER) + 1)
     except gspread.WorksheetNotFound:
         ws = sh.add_worksheet(title=tab_name, rows=1000, cols=len(TARGET_HEADER) + 1)
     return ws
 
 def push(xlsx_path, aliases_path, collapse_rules_path, party_order_path, question_labels_path,
-         out_csv, sheet_id, tab_name, creds_json, tol=0.02):
+         out_csv, sheet_id, tab_name, creds_json, tol=0.02, clear_first=False):
     summary = run(xlsx_path, aliases_path, collapse_rules_path, party_order_path,
                   question_labels_path, out_csv, tol=tol)
     rows_with_flags = summary['rows_with_flags']
@@ -25,7 +30,7 @@ def push(xlsx_path, aliases_path, collapse_rules_path, party_order_path, questio
         print("No rows to push -- nothing written to the sheet.")
         return summary
 
-    ws = get_worksheet(sheet_id, tab_name, creds_json)
+    ws = get_worksheet(sheet_id, tab_name, creds_json, clear=clear_first)
     existing = ws.get_all_values()
     values = []
     if not existing:
